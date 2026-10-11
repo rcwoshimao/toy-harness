@@ -1,0 +1,13 @@
+touch {index,config}.py
+mkdir -p config 
+
+touch config/{SYSTEM.md,tools.py}
+
+mkdir -p tools
+touch tools/{bash.py,fsOps.js,toolCall.py}
+
+mkdir -p utils
+
+touch utils/{approval,pathSecurity,userAppend,commands}.py
+
+mkdir -p test
