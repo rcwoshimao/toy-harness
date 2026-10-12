@@ -1,30 +1,34 @@
 import anthropic
 import os
+import copy
 from dotenv import load_dotenv
 
 load_dotenv()
-
-ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
 
 model="claude-haiku-5-5"
 max_tokens=1024
 messages=[]
 
 while(True): 
-    user_input = input("Text for next step > ").strip()
-    if user_input == "exit": 
+    user_input_string = input("Text for next step > ").strip()
+    if user_input_string == "exit": 
         break
-    if not user_input: continue 
-    messages.append({"role": "user", "content": user_input})
-    result = anthropic.Anthropic().messages.create(
-    model="claude-haiku-5-5",
-    max_tokens=1024,
-    messages=messages,
-    )
-    
-    messages.append({"role": "assistant", "content": result.content})
-    print(result)
+    if not user_input_string: continue 
+    user_input = {"role": "user", "content": user_input_string}
+    temp_messages=messages + [user_input]
 
+    try: 
+        result = anthropic.Anthropic().messages.create(
+        model=model,
+        max_tokens=max_tokens,
+        messages=temp_messages,
+        )
+    except anthropic.APIError as e:
+        print(e)
+    else: 
+        messages.append(user_input)
+        messages.append({"role": "assistant", "content": result.content})
+        print(result.content)
     # print(f"messages:\n {messages}")
 
 
