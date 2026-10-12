@@ -10,14 +10,22 @@ model="claude-haiku-5-5"
 max_tokens=1024
 messages=[]
 
-
-
 while(True): 
-    text = input("> ")
-    if text == "exit": 
+    user_input = input("Text for next step > ")
+    if user_input == "exit": 
         break
-    print("You said, ", text)
+    messages.append({"role": "user", "content": user_input})
 
+    result = anthropic.Anthropic().messages.create(
+    model="claude-haiku-5-5",
+    max_tokens=1024,
+    messages=messages,
+    )
+    print(result)
+    print(messages)
+
+    
+    
 
 
 # message = anthropic.Anthropic().messages.create(
