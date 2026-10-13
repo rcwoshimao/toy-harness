@@ -8,6 +8,8 @@ load_dotenv()
 model="claude-haiku-5-5"
 max_tokens=1024
 messages=[]
+client = anthropic.Anthropic()
+
 
 while(True): 
     user_input_string = input("Text for next step > ").strip()
@@ -18,7 +20,7 @@ while(True):
     temp_messages=messages + [user_input]
 
     try: 
-        result = anthropic.Anthropic().messages.create(
+        result = client.messages.create(
         model=model,
         max_tokens=max_tokens,
         messages=temp_messages,
