@@ -1,16 +1,6 @@
-import anthropic
-import os
-import copy
-from dotenv import load_dotenv
+from utils.core import *
 
-load_dotenv()
-
-model="claude-haiku-5-5"
-max_tokens=1024
-messages=[]
-client = anthropic.Anthropic()
-
-
+messages = []
 while(True): 
     user_input_string = input("Text for next step > ").strip()
     if user_input_string == "exit": 
@@ -20,9 +10,9 @@ while(True):
     temp_messages=messages + [user_input]
 
     try: 
-        result = client.messages.create(
-        model=model,
-        max_tokens=max_tokens,
+        result = CLIENT.messages.create(
+        model=MODEL,
+        max_tokens=MAX_TOKENS,
         messages=temp_messages,
         )
     except anthropic.APIError as e:
