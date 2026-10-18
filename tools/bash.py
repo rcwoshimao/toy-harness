@@ -17,8 +17,6 @@ except ImportError:
 log = get_logger(__name__)
 log.debug("starting")
 
-tool_choice = {"type": "auto"}
-
 tools = [
     {
         "name": "bash",
@@ -113,19 +111,17 @@ def check_command(command):
 
 
 
-def agent_loop(messages: list, tool_choice = {"type": "auto"}): 
+def agent_loop(messages: list): 
     while(True):
         # log.debug("started second while loop")
         response = CLIENT.messages.create(
             model=MODEL,
             max_tokens=MAX_TOKENS,
             tools=tools,
-            tool_choice=tool_choice,
             messages=messages,
             system=SYSTEM_PROMPT,
         )
         # log.debug(f"Initial response = {response}")
-        tool_choice = {"type": "auto"}
 
         messages.append({"role": "assistant", "content":response.content}) 
         
@@ -184,7 +180,7 @@ if __name__ == "__main__":
         # log.debug("started first while loop")
         query = {"role": "user", "content": query}
         messages.append(query)
-        response = agent_loop(messages,tool_choice=tool_choice)
+        response = agent_loop(messages)
 
         for block in response.content:
                     if block.type == "text":
