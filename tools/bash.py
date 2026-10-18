@@ -3,6 +3,17 @@ import subprocess
 import shlex
 import time
 
+#让程序在意外情况下不要崩溃
+try:
+    import readline
+    # #143 UTF-8 backspace fix for macOS libedit
+    readline.parse_and_bind('set bind-tty-special-chars off')
+    readline.parse_and_bind('set input-meta on')
+    readline.parse_and_bind('set output-meta on')
+    readline.parse_and_bind('set convert-meta off')
+except ImportError:
+    pass
+
 log = get_logger(__name__)
 log.debug("starting")
 
@@ -11,13 +22,13 @@ tool_choice = {"type": "auto"}
 tools = [
     {
         "name": "bash",
-        "description": "Access shell and bash command",
+        "description": "Run a shell command",
         "input_schema": {
             "type": "object",
             "properties": {
                 "command": {
                     "type": "string",
-                    "description": "The command given to run in shell",
+                    "description": "The command given to run in shell. Will time out after 30 seconds.",
                 }
             },
             "required": ["command"],
@@ -28,8 +39,7 @@ tools = [
 
 
 def bash(command, timeout=30):
-    print(f"==============\n")
-    print(f"  $ {command}")
+    console.print(Panel(command, title="bash", border_style="yellow")) 
     start = time.monotonic()
     proc = subprocess.Popen(command, shell=True, text=True,
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -51,29 +61,14 @@ def bash(command, timeout=30):
     # TODO: 用 stdout、stderr、proc.returncode 组装要送回给 Claude 的结果
     # " output = bash(command)" 
     returncode = proc.returncode
-    print(f"==============\n")
     if returncode != 0: # This is safer than == 1 
         return f"command failed. \n return code = {returncode}. \n stdout: {stdout}. \n stderr: {stderr}"
     else: 
         return f"command succeed. \n return code = {returncode}. \n stdout: {stdout}. \n stderr: {stderr}"
     
-    
 
 
 TOOL_FUNCTIONS = {"bash": bash}
-
-DENY = {"sudo", "su", "chmod", "chown", "kill", "crontab", "dd", "diskutil", "mkfs"}
-
-SAFE = {"ls", "pwd", "cat", "head", "tail", "wc", "echo", "file", "stat",
-        "which", "whoami", "date", "uname", "grep", "rg", "find", "git"}
-
-# 有条件安全：命令本身 OK，但带了这些参数就不算安全
-UNSAFE_FLAGS = {
-    "find": {"-delete", "-exec", "-execdir", "-ok", "-okdir"},
-}
-SAFE_GIT_SUBCOMMANDS = {"status", "log", "diff", "branch", "show"}
-SHELL_METACHARS = ";&|`$<>\n\r"
-
 
 def check_command(command):
     """Return (decision, reason). decision is "allow", "deny", or "ask"."""
@@ -97,11 +92,11 @@ def check_command(command):
 
     # 3. 黑名单：直接拒绝
     if program in DENY:
-        return "deny", f"'{program}' is never allowed"
+        return "deny", f" '{program}' is never allowed"
 
     # 4. 不在白名单里：问你
     if program not in SAFE:
-        return "ask", f"'{program}' is not in the safe list"
+        return "ask", f" '{program}' is not in the safe list"
 
     # 5. 在白名单里，但带了危险参数：问你
     if program in UNSAFE_FLAGS:
@@ -118,16 +113,7 @@ def check_command(command):
 
 
 
-while(True):
-    # log.debug("started first while loop")
-    user_input_string = input("Text for next step > ").strip()
-    if user_input_string == "exit": 
-            break
-    if not user_input_string: continue 
-    user_input = {"role": "user", "content": user_input_string}
-    messages = messages + [user_input]
-    response = None 
-
+def agent_loop(messages: list, tool_choice = {"type": "auto"}): 
     while(True):
         # log.debug("started second while loop")
         response = CLIENT.messages.create(
@@ -144,7 +130,7 @@ while(True):
         messages.append({"role": "assistant", "content":response.content}) 
         
         if response.stop_reason != "tool_use":
-            log.debug(f"Response Stop reason = {response.stop_reason}, stopped responding")
+            # log.debug(f"Response Stop reason = {response.stop_reason}, stopped responding")
             break
         else:
             # log.debug(f"Tool requested!")
@@ -156,9 +142,12 @@ while(True):
                     decision, reason = check_command(command)
 
                     if decision == "allow":
-                        log.debug(f"Auto-approved: {command}")
+                        # log.debug(f"Auto-approved: {command}")
+                        console.print("[bold #859900]✓ approved[/]")
                         output = bash(command)
                     elif decision == "deny":
+                        console.print(f"[bold red]x Denied[/] {escape(command)}") 
+                        console.print(f"  [dim]{escape(reason)}[/]")
                         output = f"Blocked: {reason}. The command was not run."
                     else:
                         print(f"\nClaude wants to run: {command}")
@@ -175,8 +164,28 @@ while(True):
                             "content": str(output),
                         })
                     # log.debug(f"Tool results appended {tool_results})")
-            messages.append({"role":"user", "content":tool_results})  
+            messages.append({"role":"user", "content":tool_results}) 
+    return response  
 
-    for block in response.content:
-        if block.type == "text":
-            print("Claude", block.text)
+    
+
+# -- Entry point --
+if __name__ == "__main__":
+    messages = []
+    while(True):
+        try:
+            # \001/\002 tell Readline the ANSI escapes have zero display width.
+            query = input("\001\033[36m\002toy-harness >> \001\033[0m\002")
+        except (EOFError, KeyboardInterrupt):
+            break
+        if query.strip().lower() in ("q", "exit", ""):
+            break
+
+        # log.debug("started first while loop")
+        query = {"role": "user", "content": query}
+        messages.append(query)
+        response = agent_loop(messages,tool_choice=tool_choice)
+
+        for block in response.content:
+                    if block.type == "text":
+                        console.print(Markdown(block.text, code_theme="solarized-light"))
