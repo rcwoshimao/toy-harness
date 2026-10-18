@@ -43,7 +43,7 @@ UNSAFE_FLAGS = {
     "find": {"-delete", "-exec", "-execdir", "-ok", "-okdir"},
 }
 SAFE_GIT_SUBCOMMANDS = {"status", "log", "diff", "branch", "show"}
-SHELL_METACHARS = "/[;&|`$<>\n\r]/"
+SHELL_METACHARS = ";&|`$<>\n\r"
 
 
 def check_command(command):
