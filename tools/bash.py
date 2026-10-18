@@ -1,6 +1,7 @@
 from utils.core import *
 import subprocess
 import shlex
+import time
 
 log = get_logger(__name__)
 log.debug("starting")
@@ -24,12 +25,40 @@ tools = [
     }
 ]
 
-def bash(command):
-    log.debug("Called bash")
-    result = subprocess.run(command, shell=True, capture_output=True, text=True)
-    if not result: 
-        return f"Error: unknown command '{command}'."
-    return result 
+
+
+def bash(command, timeout=30):
+    print(f"==============\n")
+    print(f"  $ {command}")
+    start = time.monotonic()
+    proc = subprocess.Popen(command, shell=True, text=True,
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    while True:
+        try:
+            stdout, stderr = proc.communicate(timeout=1)   # 最多等 1 秒
+            break                                          # 跑完了
+        except subprocess.TimeoutExpired:
+            elapsed = time.monotonic() - start
+            if elapsed > timeout:
+                proc.kill()
+                stdout, stderr = proc.communicate()
+                print(f"\r  stopped after {elapsed:.0f}s")
+                return f"Command timed out after {timeout} seconds and was stopped."
+            print(f"\r  running for {elapsed:.0f}s...", end="", flush=True)
+
+    print(f"\r  done in {time.monotonic() - start:.1f}s        ")
+    # TODO: 用 stdout、stderr、proc.returncode 组装要送回给 Claude 的结果
+    # " output = bash(command)" 
+    returncode = proc.returncode
+    print(f"==============\n")
+    if returncode != 0: # This is safer than == 1 
+        return f"command failed. \n return code = {returncode}. \n stdout: {stdout}. \n stderr: {stderr}"
+    else: 
+        return f"command succeed. \n return code = {returncode}. \n stdout: {stdout}. \n stderr: {stderr}"
+    
+    
+
 
 TOOL_FUNCTIONS = {"bash": bash}
 
@@ -107,6 +136,7 @@ while(True):
             tools=tools,
             tool_choice=tool_choice,
             messages=messages,
+            system=SYSTEM_PROMPT,
         )
         # log.debug(f"Initial response = {response}")
         tool_choice = {"type": "auto"}
