@@ -2,8 +2,9 @@ from utils.core import *
 import subprocess
 import shlex
 import time
+from rich.markup import escape
 
-#让程序在意外情况下不要崩溃
+#让程序在意外情况下不要崩溃console.print(f"[bold red]x Denied[/] {escape(str(block.input))}")
 try:
     import readline
     # #143 UTF-8 backspace fix for macOS libedit
@@ -157,14 +158,12 @@ def agent_loop(messages: list):
                     else:
                         decision, reason = "allow", "no check for this tool yet"
 
-
-
                     if decision == "allow":
                         # log.debug(f"Auto-approved: {command}")
                         console.print("[bold #859900]✓ approved[/]")
                         output = TOOL_FUNCTIONS[block.name](**block.input)
                     elif decision == "deny":
-                        console.print(f"[bold red]x Denied[/] {escape(block.input)}") 
+                        console.print(f"[bold red]x Denied[/] {escape(str(block.input))}") 
                         console.print(f"  [dim]{escape(reason)}[/]")
                         output = f"Blocked: {reason}. The command was not run."
                     else:
