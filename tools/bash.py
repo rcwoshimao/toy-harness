@@ -31,10 +31,22 @@ tools = [
             },
             "required": ["command"],
         },
-    }
+    },
+    {
+            "name": "eat",
+            "description": "Fake command for you to pretend to have eaten an apple",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "number": {
+                        "type": "integer",
+                        "description": "Number of apples eaten",
+                    }
+                },
+                "required": ["number"],
+            },
+        }
 ]
-
-
 
 def bash(command, timeout=30):
     console.print(Panel(command, title="bash", border_style="yellow")) 
@@ -63,10 +75,15 @@ def bash(command, timeout=30):
         return f"command failed. \n return code = {returncode}. \n stdout: {stdout}. \n stderr: {stderr}"
     else: 
         return f"command succeed. \n return code = {returncode}. \n stdout: {stdout}. \n stderr: {stderr}"
-    
+
+def eat(number):
+    return f"Ate {number} apples."
 
 
-TOOL_FUNCTIONS = {"bash": bash}
+TOOL_FUNCTIONS={
+    "bash": bash,
+    "eat": eat,
+}
 
 def check_command(command):
     """Return (decision, reason). decision is "allow", "deny", or "ask"."""
@@ -133,23 +150,28 @@ def agent_loop(messages: list):
             tool_results=[]
             for block in response.content:
                 if block.type=="tool_use":
-                    # log.debug(f"Calling tool{block.name}({block.input})")
-                    command = block.input["command"]
-                    decision, reason = check_command(command)
+                    log.debug(f"Calling tool{block.name}")
+
+                    if block.name == "bash":   # TODO: move check into the tool
+                        decision, reason = check_command(block.input["command"])
+                    else:
+                        decision, reason = "allow", "no check for this tool yet"
+
+
 
                     if decision == "allow":
                         # log.debug(f"Auto-approved: {command}")
                         console.print("[bold #859900]✓ approved[/]")
-                        output = bash(command)
+                        output = TOOL_FUNCTIONS[block.name](**block.input)
                     elif decision == "deny":
-                        console.print(f"[bold red]x Denied[/] {escape(command)}") 
+                        console.print(f"[bold red]x Denied[/] {escape(block.input)}") 
                         console.print(f"  [dim]{escape(reason)}[/]")
                         output = f"Blocked: {reason}. The command was not run."
                     else:
-                        print(f"\nClaude wants to run: {command}")
+                        print(f"\nClaude wants to run: {block.input}")
                         print(f"Reason for asking: {reason}")
                         if input("Approve? (y/n) > ").strip().lower() == "y":
-                            output = bash(command)
+                            output = TOOL_FUNCTIONS[block.name](**block.input)
                         else:
                             output = "The user rejected this command. It was not run."
 

@@ -67,3 +67,5 @@ UNSAFE_FLAGS = {
 }
 SAFE_GIT_SUBCOMMANDS = {"status", "log", "diff", "branch", "show"}
 SHELL_METACHARS = ";&|`$<>\n\r"
+
+
