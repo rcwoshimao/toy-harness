@@ -56,16 +56,7 @@ ENVIRONMENT_PROMPT = (
     else "Unix-like: the bash tool runs the system shell"
 )
 
-DENY = {"sudo", "su", "chmod", "chown", "kill", "crontab", "dd", "diskutil", "mkfs"}
 
-SAFE = {"ls", "pwd", "cat", "head", "tail", "wc", "echo", "file", "stat",
-        "which", "whoami", "date", "uname", "grep", "rg", "find", "git"}
-
-# 有条件安全：命令本身 OK，但带了这些参数就不算安全
-UNSAFE_FLAGS = {
-    "find": {"-delete", "-exec", "-execdir", "-ok", "-okdir"},
-}
-SAFE_GIT_SUBCOMMANDS = {"status", "log", "diff", "branch", "show"}
 SHELL_METACHARS = ";&|`$<>\n\r"
 
 

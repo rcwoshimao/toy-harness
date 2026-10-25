@@ -3,44 +3,66 @@ import subprocess
 import shlex
 import time
 
+DENY = {
+    # 1. 执行任意代码的解释器（今晚的漏洞）
+    "python", "python3", "python3.12", "node", "ruby", "perl", "php",
+    "osascript",          # macOS 的 AppleScript，能控制整台电脑
+    "bash", "sh", "zsh", "fish", "dash",
 
+    # 2. 包装器：能代替你去跑别的程序，用来绕过名单
+    "env", "xargs", "exec", "eval", "command", "builtin",
+    "nohup", "nice", "timeout", "time", "watch", "script",
+
+    # 3. 提权
+    "sudo", "su", "doas",
+
+    # 4. 删除、破坏
+    "rm", "rmdir", "shred", "dd", "mkfs", "diskutil", "truncate",
+
+    # 5. 改权限、改归属
+    "chmod", "chown", "chgrp", "chflags", "xattr",
+
+    # 6. 网络：下载、上传、外传数据
+    "curl", "wget", "nc", "ncat", "ssh", "scp", "sftp", "rsync", "ftp", "telnet",
+
+    # 7. 进程、系统
+    "kill", "killall", "pkill", "shutdown", "reboot", "launchctl", "crontab",
+    "defaults",           # macOS 改系统设置
+
+    # 8. 装东西
+    "pip", "pip3", "npm", "npx", "brew", "conda", "mamba", "uv",
+}
+
+SAFE = {"ls", "pwd", "cat", "head", "tail", "wc", "echo", "file", "stat",
+        "which", "whoami", "date", "uname", "grep", "rg", "find", "git"}
+
+# 有条件安全：命令本身 OK，但带了这些参数就不算安全
+UNSAFE_FLAGS = {
+    "find": {"-delete", "-exec", "-execdir", "-ok", "-okdir"},
+}
+SAFE_GIT_SUBCOMMANDS = {"status", "log", "diff", "branch", "show"}
 
 
 log = get_logger(__name__)
 log.debug(f"STARTED. IN {os.getcwd()}")
 
-tools = [
-    {
-        "name": "bash",
-        "description": "Run a shell command",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "command": {
-                    "type": "string",
-                    "description": "The command given to run in shell. Will time out after 30 seconds.",
-                }
-            },
-            "required": ["command"],
+SCHEMA = {
+    "name": "bash",
+    "description": "Run a shell command",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "command": {
+                "type": "string",
+                "description": "The command given to run in shell. Will time out after 30 seconds.",
+            }
         },
+        "required": ["command"],
     },
-    {
-            "name": "eat",
-            "description": "Fake command for you to pretend to have eaten an apple",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "number": {
-                        "type": "integer",
-                        "description": "Number of apples eaten",
-                    }
-                },
-                "required": ["number"],
-            },
-        }
-]
+}
 
-def bash(command, timeout=30):
+
+def run(command, timeout=30):
     console.print(Panel(command, title="bash", border_style="yellow")) 
     start = time.monotonic()
     proc = subprocess.Popen(command, shell=True, text=True,
@@ -68,15 +90,6 @@ def bash(command, timeout=30):
     else: 
         return f"command succeed. \n return code = {returncode}. \n stdout: {stdout}. \n stderr: {stderr}"
 
-def eat(number):
-    return f"Ate {number} apples."
-
-
-TOOL_FUNCTIONS={
-    "bash": bash,
-    "eat": eat,
-}
-
 def check_command(command):
     """Return (decision, reason). decision is "allow", "deny", or "ask"."""
 
@@ -94,7 +107,7 @@ def check_command(command):
     if not words:
         return "deny", "empty command"
 
-    program = words[0]
+    program = os.path.basename(words[0])
     args = words[1:]
 
     # 3. 黑名单：直接拒绝
@@ -118,5 +131,8 @@ def check_command(command):
 
     return "allow", "known safe command"
 
+def check(input):
+    print(" &&&&&& running check &&&&&&")
+    return check_command(input["command"])
 
 

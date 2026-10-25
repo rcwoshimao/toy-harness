@@ -1,6 +1,6 @@
 from utils.core import *
 from rich.markup import escape
-from tools.bash import tools, check_command, TOOL_FUNCTIONS
+from tools import TOOLS, HANDLERS
 
 #让程序在意外情况下不要崩溃console.print(f"[bold red]x Denied[/] {escape(str(block.input))}")
 try:
@@ -22,7 +22,7 @@ def agent_loop(messages: list):
         response = CLIENT.messages.create(
             model=MODEL,
             max_tokens=MAX_TOKENS,
-            tools=tools,
+            tools=TOOLS,
             messages=messages,
             system=SYSTEM_PROMPT,
         )
@@ -39,16 +39,17 @@ def agent_loop(messages: list):
             for block in response.content:
                 if block.type=="tool_use":
                     log.debug(f"Calling tool{block.name}")
-
-                    if block.name == "bash":   # TODO: move check into the tool
-                        decision, reason = check_command(block.input["command"])
+                    tool = HANDLERS.get(block.name)
+                    if tool == None: 
+                        decision, reason = "deny", f"unknown tool '{block.name}'"
                     else:
-                        decision, reason = "allow", "no check for this tool yet"
+                        decision, reason = tool.check(block.input)
+
 
                     if decision == "allow":
                         # log.debug(f"Auto-approved: {command}")
                         console.print("[bold #859900]✓ approved[/]")
-                        output = TOOL_FUNCTIONS[block.name](**block.input)
+                        output = tool.run(**block.input)
                     elif decision == "deny":
                         console.print(f"[bold red]x Denied[/] {escape(str(block.input))}") 
                         console.print(f"  [dim]{escape(reason)}[/]")
@@ -57,7 +58,7 @@ def agent_loop(messages: list):
                         print(f"\nClaude wants to run: {block.input}")
                         print(f"Reason for asking: {reason}")
                         if input("Approve? (y/n) > ").strip().lower() == "y":
-                            output = TOOL_FUNCTIONS[block.name](**block.input)
+                            output = tool.run(**block.input)
                         else:
                             output = "The user rejected this command. It was not run."
 
