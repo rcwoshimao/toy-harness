@@ -84,7 +84,6 @@ def test_full_path_cannot_bypass_deny(command):
 @pytest.mark.parametrize("command", [
     "ls",
     "ls -la tools",
-    "cat main.py",
     'find . -maxdepth 3 -iname "*eat*"',
     "git status",
     "git log",

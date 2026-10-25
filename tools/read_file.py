@@ -1,5 +1,6 @@
 from utils.core import *
 from pathlib import Path
+from tools.path_policy import check_read_path, resolve_path
 import time 
 
 log = get_logger(__name__)
@@ -22,10 +23,9 @@ SCHEMA = {
     },
 }
 
-
 def run(path):
     console.print(Panel(path, title="read_file", border_style="yellow")) 
-    p = Path(path)
+    p = resolve_path(path)
 
     if not p.exists():
         return f"Error: '{path}' does not exist."
@@ -38,9 +38,6 @@ def run(path):
             total = len(f)
             f = f[:MAX_CHARS]
             f += f"\n\n[truncated: showing first {MAX_CHARS} of {total} characters]"
-
-        print("===========printing f=========")
-        print(f)
         return f 
     except UnicodeDecodeError as e :
         return f"Error: '{path}' file is not a readable format."
@@ -49,11 +46,11 @@ def run(path):
     except OSError as e:
         return f"Error: cannot read '{p}', {e}"
 
+def check_path(path):
+    return 
+
 def check(input):
-    name = Path(input["path"]).name
-    if name == ".env" or name.startswith(".env."):
-        return "deny", "secret files are not readable"
-    return "allow", "reading is safe"
+    return check_read_path(input["path"])
     
                 
         
