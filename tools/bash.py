@@ -33,8 +33,8 @@ DENY = {
     "pip", "pip3", "npm", "npx", "brew", "conda", "mamba", "uv",
 }
 
-SAFE = {"ls", "pwd", "cat", "head", "tail", "wc", "echo", "file", "stat",
-        "which", "whoami", "date", "uname", "grep", "rg", "find", "git"}
+SAFE = {"ls", "pwd", "wc", "echo", "file", "stat",
+        "which", "whoami", "date", "uname", "find", "git"}
 
 # 有条件安全：命令本身 OK，但带了这些参数就不算安全
 UNSAFE_FLAGS = {
@@ -132,7 +132,6 @@ def check_command(command):
     return "allow", "known safe command"
 
 def check(input):
-    print(" &&&&&& running check &&&&&&")
     return check_command(input["command"])
 
 
