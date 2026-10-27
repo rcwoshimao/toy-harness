@@ -56,7 +56,5 @@ ENVIRONMENT_PROMPT = (
     else "Unix-like: the bash tool runs the system shell"
 )
 
-
-SHELL_METACHARS = ";&|`$<>\n\r"
-
-
+# 串联、重定向、变量、通配符：出现任何一个就 deny
+SHELL_METACHARS = set(";&|<>$`\n*?[]~(){}!")

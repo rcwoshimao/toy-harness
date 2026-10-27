@@ -38,9 +38,14 @@ SAFE = {"ls", "pwd", "wc", "echo", "file", "stat",
 
 # 有条件安全：命令本身 OK，但带了这些参数就不算安全
 UNSAFE_FLAGS = {
-    "find": {"-delete", "-exec", "-execdir", "-ok", "-okdir"},
+    "find": {"-delete", "-exec", "-execdir", "-ok", "-okdir",
+             "-fprint", "-fprint0", "-fprintf", "-fls"},
 }
-SAFE_GIT_SUBCOMMANDS = {"status", "log", "diff", "branch", "show"}
+
+# git 的危险参数：能读任意文件，或者把输出写进文件
+UNSAFE_GIT_FLAGS = {"--no-index", "--output", "--ext-diff"}
+
+SAFE_GIT_SUBCOMMANDS = {"status", "log", "diff", "branch"}
 
 
 log = get_logger(__name__)
@@ -48,7 +53,7 @@ log.debug(f"STARTED. IN {os.getcwd()}")
 
 SCHEMA = {
     "name": "bash",
-    "description": "Run a shell command",
+    "description": "Run a shell command. To read or write files, use the read and write tools instead of cat, echo > or similar.",
     "input_schema": {
         "type": "object",
         "properties": {
@@ -128,10 +133,15 @@ def check_command(command):
     if program == "git":
         if not args or args[0] not in SAFE_GIT_SUBCOMMANDS:
             return "ask", "only read-only git commands are auto-approved"
+        
+        # --output=out.txt 要先切掉 = 后面，才比得到 "--output"
+        if any(a.split("=")[0] in UNSAFE_GIT_FLAGS for a in args):
+            return "ask", "this git flag can read or write arbitrary files"
 
     return "allow", "known safe command"
 
 def check(input):
-    return check_command(input["command"])
-
-
+    command = input.get("command")
+    if not isinstance(command, str):
+        return "deny", "command must be a string"
+    return check_command(command)
