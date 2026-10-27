@@ -1,6 +1,6 @@
 from utils.core import *
 from pathlib import Path
-from tools.path_policy import check_read_path, resolve_path
+from tools.path_policy import check_read, resolve_path
 import time 
 
 log = get_logger(__name__)
@@ -24,7 +24,7 @@ SCHEMA = {
 }
 
 def run(path):
-    console.print(Panel(path, title="read_file", border_style="yellow")) 
+    console.print(Panel(path, title="read", border_style="yellow")) 
     p = resolve_path(path)
 
     if not p.exists():
@@ -46,11 +46,8 @@ def run(path):
     except OSError as e:
         return f"Error: cannot read '{p}', {e}"
 
-def check_path(path):
-    return 
-
 def check(input):
-    return check_read_path(input["path"])
+    return check_read(input.get("path"))
     
                 
         

@@ -45,7 +45,7 @@ def agent_loop(messages: list):
                     else:
                         decision, reason = tool.check(block.input)
 
-
+                    # here we handle the decision. if the decision is allow, we run the tool and give the agent the result as a full string; if we dont allow, we give the agent the reasoning. No matter what we do, run the tool block or not, we will always return a list of content block to agent and nothing else (for read and write file, it's just string.)
                     if decision == "allow":
                         # log.debug(f"Auto-approved: {command}")
                         console.print("[bold #859900]✓ approved[/]")
